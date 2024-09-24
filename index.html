@@ -167,7 +167,7 @@
                 return;
             }
 
-            const siteRef = firebase.database().ref('sites/emplazamientos/' + cadenaAlfanumerica);
+            const siteRef = firebase.database().ref('datos/emplazamiento/' + cadenaAlfanumerica);
             siteRef.once('value').then((snapshot) => {
                 if (snapshot.exists()) {
                     const coordenadas = snapshot.val().coordenadas;
@@ -192,7 +192,7 @@
                 return;
             }
 
-            const siteRef = firebase.database().ref('sites/emplazamientos/' + nuevaCadena);
+            const siteRef = firebase.database().ref('datos/emplazamiento/' + nuevaCadena);
             siteRef.once('value').then((snapshot) => {
                 if (snapshot.exists()) {
                     alert('La cadena ya existe en la base de datos');
@@ -219,9 +219,9 @@
                 return;
             }
 
-            firebase.database().ref('sites/emplazamientos/' + siteAEliminar).once('value').then((snapshot) => {
+            firebase.database().ref('datos/emplazamiento/' + siteAEliminar).once('value').then((snapshot) => {
                 if (snapshot.exists()) {
-                    firebase.database().ref('sites/emplazamientos/' + siteAEliminar).remove()
+                    firebase.database().ref('datos/emplazamiento/' + siteAEliminar).remove()
                     .then(() => {
                         alert(`Site ${siteAEliminar} eliminado con éxito.`);
                         document.getElementById("siteAEliminar").value = "";
@@ -250,6 +250,7 @@
 
 </body>
 </html>
+
 
 
 
