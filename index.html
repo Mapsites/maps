@@ -50,7 +50,7 @@
             margin-top: 20px;
         }
 
-        #searchInput, #nuevaCadena, #siteAEliminar {
+        #searchInput, #nuevaCadena, #siteAEliminar, #nuevasCoordenadas {
             padding: 10px;
             font-size: 16px;
             width: 200px;
@@ -97,7 +97,6 @@
         }
     </style>
 </head>
- 
 <body>
 
     <h1>Buscar Coordenadas</h1>
@@ -198,6 +197,7 @@
                 if (snapshot.exists()) {
                     alert('La cadena ya existe en la base de datos');
                 } else {
+                    // Guardar los datos
                     siteRef.set({
                         coordenadas: nuevasCoordenadas,
                         sites: nuevaCadena // Agregamos el campo "sites"
@@ -209,6 +209,8 @@
                         alert("Error al guardar el site: " + error.message);
                     });
                 }
+            }).catch((error) => {
+                alert("Error al verificar si el site existe: " + error.message);
             });
         }
 
@@ -226,12 +228,14 @@
                     .then(() => {
                         alert(`Site ${siteAEliminar} eliminado con éxito.`);
                         document.getElementById("siteAEliminar").value = "";
+                    }).catch((error) => {
+                        alert("Error al eliminar el site: " + error.message);
                     });
                 } else {
                     alert("No se encontró el site para eliminar.");
                 }
             }).catch((error) => {
-                alert("Error al eliminar el site: " + error.message);
+                alert("Error al buscar el site: " + error.message);
             });
         }
 
@@ -285,4 +289,3 @@
 
 </body>
 </html>
-
