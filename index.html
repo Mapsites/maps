@@ -1,10 +1,30 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buscar Coordenadas</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDoc, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBYtnGs_6EtsDmFcg_fsQDfr51bwMlYQp8",
+            authDomain: "mapsite-3ca1a.firebaseapp.com",
+            projectId: "mapsite-3ca1a",
+            storageBucket: "mapsite-3ca1a.appspot.com",
+            messagingSenderId: "594377703312",
+            appId: "1:594377703312:web:6eee3d64cc46affabe3d15",
+            measurementId: "G-TG8FMX0SXC"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -139,21 +159,7 @@
     <button id="refreshButton" onclick="refreshPage()">Refrescar</button>
 
     <script>
-        let database = {
-            'ABC123': '40.7128° N, 74.0060° W', // Coordenadas de Nueva York
-            'XYZ456': '34.0522° N, 118.2437° W', // Coordenadas de Los Ángeles
-            'DELETE': '51.5074° N, 0.1278° W' // Coordenadas de Londres (ejemplo)
-        };
-
-        function mostrarBarraBusqueda() {
-            document.getElementById("searchContainer").style.display = "block";
-        }
-
-        function mostrarFormularioIngresar() {
-            document.getElementById("nuevoSiteContainer").style.display = "block";
-        }
-
-        function buscarCoordenadas() {
+        async function buscarCoordenadas() {
             const cadenaAlfanumerica = document.getElementById("searchInput").value.toUpperCase(); // Convertir a mayúsculas
 
             if (cadenaAlfanumerica.length === 0) {
@@ -161,18 +167,12 @@
                 return;
             }
 
-            if (cadenaAlfanumerica === "WRITE") {
-                generarExcel();
-                return;
-            }
+            const docRef = doc(db, "sites/emplazamiento", cadenaAlfanumerica);
+            const docSnap = await getDoc(docRef);
 
-            if (cadenaAlfanumerica === "READ") {
-                document.getElementById("excelContainer").style.display = "block";
-                return;
-            }
-
-            if (database[cadenaAlfanumerica]) {
-                const coordenadas = database[cadenaAlfanumerica];
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const coordenadas = data.coordenadas;
                 document.getElementById("result").textContent = `Coordenadas encontradas: ${coordenadas}`;
 
                 document.getElementById("mapButton").style.display = "inline-block";
@@ -184,7 +184,7 @@
             }
         }
 
-        function agregarNuevoSite() {
+        async function agregarNuevoSite() {
             const nuevaCadena = document.getElementById("nuevaCadena").value.toUpperCase(); // Convertir a mayúsculas
             const nuevasCoordenadas = document.getElementById("nuevasCoordenadas").value;
 
@@ -193,20 +193,30 @@
                 return;
             }
 
-            if (database[nuevaCadena]) {
+            const docRef = doc(db, "sites/emplazamiento", nuevaCadena);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
                 alert('La cadena ya existe en la base de datos');
                 return;
             }
 
-            database[nuevaCadena] = nuevasCoordenadas;
-            alert("Nuevo site agregado con éxito.");
+            try {
+                await addDoc(collection(db, "sites/emplazamiento"), {
+                    sites: nuevaCadena,
+                    coordenadas: nuevasCoordenadas
+                });
+                alert("Nuevo site agregado con éxito.");
 
-            document.getElementById("nuevaCadena").value = "";
-            document.getElementById("nuevasCoordenadas").value = "";
-            document.getElementById("nuevoSiteContainer").style.display = "none"; // Ocultar formulario
+                document.getElementById("nuevaCadena").value = "";
+                document.getElementById("nuevasCoordenadas").value = "";
+                document.getElementById("nuevoSiteContainer").style.display = "none"; // Ocultar formulario
+            } catch (e) {
+                alert("Error al agregar el site: " + e);
+            }
         }
 
-        function eliminarSite() {
+        async function eliminarSite() {
             const siteAEliminar = document.getElementById("siteAEliminar").value.toUpperCase();
 
             if (siteAEliminar.length === 0) {
@@ -214,8 +224,11 @@
                 return;
             }
 
-            if (database[siteAEliminar]) {
-                delete database[siteAEliminar];
+            const docRef = doc(db, "sites/emplazamiento", siteAEliminar);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                await deleteDoc(docRef);
                 alert(`Site ${siteAEliminar} eliminado con éxito.`);
                 document.getElementById("siteAEliminar").value = ""; // Limpiar el campo
             } else {
@@ -237,9 +250,7 @@
             const wb = XLSX.utils.book_new();
             const wsData = [["Site", "Coordenadas"]];
 
-            for (const [key, value] of Object.entries(database)) {
-                wsData.push([key, value]);
-            }
+            // Aquí se puede agregar código para cargar datos desde Firestore y agregar al Excel.
 
             const ws = XLSX.utils.aoa_to_sheet(wsData);
             XLSX.utils.book_append_sheet(wb, ws, "Sites");
@@ -268,14 +279,17 @@
                 const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
 
                 let validData = true;
-                jsonData.slice(1).forEach(row => {
+                jsonData.slice(1).forEach(async (row) => {
                     const site = row[0];
                     const coordenadas = row[1];
 
                     if (!site || !coordenadas) {
                         validData = false; // Marca como inválido si hay datos faltantes
                     } else {
-                        database[site.toUpperCase()] = coordenadas;
+                        await addDoc(collection(db, "sites/emplazamiento"), {
+                            sites: site.toUpperCase(),
+                            coordenadas: coordenadas
+                        });
                     }
                 });
 
@@ -302,6 +316,7 @@
 
 </body>
 </html>
+
 
 
 
